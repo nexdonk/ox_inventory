@@ -63,7 +63,10 @@ function server.setPlayerInventory(player, data)
 
     if inv then
         inv.player = server.setPlayerData(player)
-        inv.player.ped = GetPlayerPed(player.source)
+
+        repeat
+            inv.player.ped = GetPlayerPed(player.source)
+        until inv.player.ped ~= 0
 
         if server.syncInventory then server.syncInventory(inv) end
         TriggerClientEvent('ox_inventory:setPlayerInventory', player.source, Inventory.Drops, inventory, totalWeight,

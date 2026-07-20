@@ -1,17 +1,17 @@
 import React, { useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { TransitionGroup } from 'react-transition-group';
+import { AnimatePresence, motion } from 'framer-motion';
 import useNuiEvent from '../../hooks/useNuiEvent';
 import useQueue from '../../hooks/useQueue';
 import { Locale } from '../../store/locale';
 import { getItemUrl } from '../../helpers';
 import { SlotWithItem } from '../../typings';
 import { Items } from '../../store/items';
-import Fade from './transitions/Fade';
 
 interface ItemNotificationProps {
   item: SlotWithItem;
   text: string;
+  count?: number;
 }
 
 export const ItemNotificationsContext = React.createContext<{
@@ -24,66 +24,88 @@ export const useItemNotifications = () => {
   return itemNotificationsContext;
 };
 
-const ItemNotification = React.forwardRef(
-  (props: { item: ItemNotificationProps; style?: React.CSSProperties }, ref: React.ForwardedRef<HTMLDivElement>) => {
-    const slotItem = props.item.item;
+const formatWeight = (weight?: number) => {
+  if (!weight || weight <= 0) return null;
+  return weight >= 1000
+    ? `${(weight / 1000).toLocaleString('en-us', { minimumFractionDigits: 2 })}kg`
+    : `${weight.toLocaleString('en-us')}g`;
+};
 
-    return (
+const ItemNotification: React.FC<{ item: ItemNotificationProps }> = ({ item }) => {
+  const slotItem = item.item;
+  const itemData = Items[slotItem.name];
+  const label = slotItem.metadata?.label || itemData?.label || slotItem.name;
+  const description = slotItem.metadata?.description || itemData?.description;
+  const weightStr = formatWeight(slotItem.weight);
+  const countStr = item.count !== undefined && item.count !== null ? `${item.count.toLocaleString('en-us')}x` : null;
+  const durabilityStr =
+    typeof slotItem.durability === 'number' ? `${Math.trunc(slotItem.durability)}% DUR` : null;
+
+  const meta = [countStr, weightStr, durabilityStr].filter(Boolean) as string[];
+
+  return (
+    <motion.div
+      className="item-notification"
+      initial={{ opacity: 0, y: 18, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 14, scale: 0.97, transition: { duration: 0.18 } }}
+      transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+    >
       <div
-        className="item-notification-item-box"
-        style={{
-          backgroundImage: `url(${getItemUrl(slotItem) || 'none'}`,
-          ...props.style,
-        }}
-        ref={ref}
-      >
-        <div className="item-slot-wrapper">
-          <div className="item-notification-action-box">
-            <p>{props.item.text}</p>
+        className="item-notification-icon"
+        style={{ backgroundImage: `url(${getItemUrl(slotItem) || 'none'})` }}
+      />
+      <div className="item-notification-text">
+        <div className="item-notification-action">{item.text}</div>
+        <div className="item-notification-name">{label}</div>
+        {meta.length > 0 && (
+          <div className="item-notification-meta">
+            {meta.map((m, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span className="item-notification-meta-sep">·</span>}
+                <span>{m}</span>
+              </React.Fragment>
+            ))}
           </div>
-          <div className="inventory-slot-label-box">
-            <div className="inventory-slot-label-text">{slotItem.metadata?.label || Items[slotItem.name]?.label}</div>
-          </div>
-        </div>
+        )}
+        {description && <div className="item-notification-desc">{description}</div>}
       </div>
-    );
-  }
-);
+    </motion.div>
+  );
+};
 
 export const ItemNotificationsProvider = ({ children }: { children: React.ReactNode }) => {
   const queue = useQueue<{
     id: number;
     item: ItemNotificationProps;
-    ref: React.RefObject<HTMLDivElement | null>;
   }>();
 
   const add = (item: ItemNotificationProps) => {
-    const ref = React.createRef<HTMLDivElement>();
-    const notification = { id: Date.now(), item, ref: ref };
-
+    const notification = { id: Date.now() + Math.random(), item };
     queue.add(notification);
 
     const timeout = setTimeout(() => {
       queue.remove();
       clearTimeout(timeout);
-    }, 2500);
+    }, 2800);
   };
 
   useNuiEvent<[item: SlotWithItem, text: string, count?: number]>('itemNotify', ([item, text, count]) => {
-    add({ item: item, text: count ? `${Locale[text]} ${count}x` : `${Locale[text]}` });
+    const action = count ? `${Locale[text]} ${count}x` : `${Locale[text]}`;
+    add({ item, text: action, count });
   });
 
   return (
     <ItemNotificationsContext.Provider value={{ add }}>
       {children}
       {createPortal(
-        <TransitionGroup className="item-notification-container">
-          {queue.values.map((notification, index) => (
-            <Fade key={`item-notification-${index}`}>
-              <ItemNotification item={notification.item} ref={notification.ref} />
-            </Fade>
-          ))}
-        </TransitionGroup>,
+        <div className="item-notification-container">
+          <AnimatePresence>
+            {queue.values.map((notification) => (
+              <ItemNotification key={notification.id} item={notification.item} />
+            ))}
+          </AnimatePresence>
+        </div>,
         document.body
       )}
     </ItemNotificationsContext.Provider>

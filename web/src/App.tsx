@@ -11,6 +11,8 @@ import DragPreview from './components/utils/DragPreview';
 import { fetchNui } from './utils/fetchNui';
 import { useDragDropManager } from 'react-dnd';
 import KeyPress from './components/utils/KeyPress';
+import { NexProvider } from './hooks/useNexConfig';
+import MouseTrail from './components/utils/MouseTrail';
 
 debugData([
   {
@@ -111,16 +113,19 @@ const App: React.FC = () => {
   });
 
   return (
-    <div className="app-wrapper">
-      <InventoryComponent />
-      <DragPreview />
-      <KeyPress />
-    </div>
+    <NexProvider>
+      <div className="app-wrapper">
+        <InventoryComponent />
+        <DragPreview />
+        <KeyPress />
+        <MouseTrail />
+      </div>
+    </NexProvider>
   );
 };
 
-addEventListener('dragstart', function (event) {
-  event.preventDefault();
-});
+addEventListener("dragstart", function(event) {
+  event.preventDefault()
+})
 
 export default App;

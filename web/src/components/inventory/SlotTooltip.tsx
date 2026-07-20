@@ -2,11 +2,23 @@ import { Inventory, SlotWithItem } from '../../typings';
 import React, { Fragment, useMemo } from 'react';
 import { Items } from '../../store/items';
 import { Locale } from '../../store/locale';
+import ReactMarkdown from 'react-markdown';
 import { useAppSelector } from '../../store';
-import ClockIcon from '../utils/icons/ClockIcon';
 import { getItemUrl } from '../../helpers';
 import Divider from '../utils/Divider';
-import Markdown from '../utils/Markdown';
+import { LuClock, LuShield, LuHash, LuTarget, LuPaintBucket, LuPuzzle, LuCircle } from 'react-icons/lu';
+
+const MetaRow: React.FC<{ icon?: React.ReactNode; label: string; value: React.ReactNode }> = ({ icon, label, value }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    {icon && <span style={{ display: 'inline-flex', color: 'rgba(255,255,255,0.45)' }}>{icon}</span>}
+    <span className="key" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Roboto Mono, monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      {label}
+    </span>
+    <span style={{ marginLeft: 'auto', fontFamily: 'Roboto Mono, monospace', fontSize: 11.5, color: '#f4f4f6' }}>
+      {value}
+    </span>
+  </div>
+);
 
 const SlotTooltip: React.ForwardRefRenderFunction<
   HTMLDivElement,
@@ -21,102 +33,99 @@ const SlotTooltip: React.ForwardRefRenderFunction<
   const description = item.metadata?.description || itemData?.description;
   const ammoName = itemData?.ammoName && Items[itemData?.ammoName]?.label;
 
-  return (
-    <>
-      {!itemData ? (
-        <div className="tooltip-wrapper" ref={ref} style={style}>
-          <div className="tooltip-header-wrapper">
-            <p>{item.name}</p>
-          </div>
-          <Divider />
+  if (!itemData) {
+    return (
+      <div className="tooltip-wrapper" ref={ref} style={style}>
+        <div className="tooltip-header-wrapper">
+          <p className="name">{item.name}</p>
         </div>
-      ) : (
-        <div style={{ ...style }} className="tooltip-wrapper" ref={ref}>
-          <div className="tooltip-header-wrapper">
-            <p>{item.metadata?.label || itemData.label || item.name}</p>
-            {inventoryType === 'crafting' ? (
-              <div className="tooltip-crafting-duration">
-                <ClockIcon />
-                <p>{(item.duration !== undefined ? item.duration : 3000) / 1000}s</p>
-              </div>
-            ) : (
-              <p>{item.metadata?.type}</p>
-            )}
+        <Divider />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ ...style }} className="tooltip-wrapper" ref={ref}>
+      <div className="tooltip-header-wrapper">
+        <p className="name">{item.metadata?.label || itemData.label || item.name}</p>
+        {inventoryType === 'crafting' ? (
+          <div className="tooltip-crafting-duration">
+            <LuClock size={11} />
+            <span style={{ fontFamily: 'Roboto Mono, monospace', fontSize: 11 }}>
+              {(item.duration !== undefined ? item.duration : 3000) / 1000}s
+            </span>
           </div>
-          <Divider />
-          {description && (
-            <div className="tooltip-description">
-              <Markdown content={description} className="tooltip-markdown" />
-            </div>
-          )}
-          {inventoryType !== 'crafting' ? (
-            <>
-              {item.durability !== undefined && (
-                <p>
-                  {Locale.ui_durability}: {Math.trunc(item.durability)}
-                </p>
-              )}
-              {item.metadata?.ammo !== undefined && (
-                <p>
-                  {Locale.ui_ammo}: {item.metadata.ammo}
-                </p>
-              )}
-              {ammoName && (
-                <p>
-                  {Locale.ammo_type}: {ammoName}
-                </p>
-              )}
-              {item.metadata?.serial && (
-                <p>
-                  {Locale.ui_serial}: {item.metadata.serial}
-                </p>
-              )}
-              {item.metadata?.components && item.metadata?.components[0] && (
-                <p>
-                  {Locale.ui_components}:{' '}
-                  {(item.metadata?.components).map((component: string, index: number, array: []) =>
-                    index + 1 === array.length ? Items[component]?.label : Items[component]?.label + ', '
-                  )}
-                </p>
-              )}
-              {item.metadata?.weapontint && (
-                <p>
-                  {Locale.ui_tint}: {item.metadata.weapontint}
-                </p>
-              )}
-              {additionalMetadata.map((data: { metadata: string; value: string }, index: number) => (
-                <Fragment key={`metadata-${index}`}>
-                  {item.metadata && item.metadata[data.metadata] && (
-                    <p>
-                      {data.value}: {item.metadata[data.metadata]}
-                    </p>
-                  )}
-                </Fragment>
-              ))}
-            </>
-          ) : (
-            <div className="tooltip-ingredients">
-              {ingredients &&
-                ingredients.map((ingredient) => {
-                  const [item, count] = [ingredient[0], ingredient[1]];
-                  return (
-                    <div className="tooltip-ingredient" key={`ingredient-${item}`}>
-                      <img src={item ? getItemUrl(item) : 'none'} alt="item-image" />
-                      <p>
-                        {count >= 1
-                          ? `${count}x ${Items[item]?.label || item}`
-                          : count === 0
-                            ? `${Items[item]?.label || item}`
-                            : count < 1 && `${count * 100}% ${Items[item]?.label || item}`}
-                      </p>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
+        ) : (
+          item.metadata?.type && <span className="badge">{item.metadata.type}</span>
+        )}
+      </div>
+      <Divider />
+
+      {description && (
+        <div className="tooltip-description">
+          <ReactMarkdown className="tooltip-markdown">{description}</ReactMarkdown>
         </div>
       )}
-    </>
+
+      {inventoryType !== 'crafting' ? (
+        <div className="tooltip-meta">
+          {item.durability !== undefined && (
+            <MetaRow
+              icon={<LuShield size={11} />}
+              label={Locale.ui_durability || 'Durability'}
+              value={`${Math.trunc(item.durability)}%`}
+            />
+          )}
+          {item.metadata?.ammo !== undefined && (
+            <MetaRow icon={<LuTarget size={11} />} label={Locale.ui_ammo || 'Ammo'} value={item.metadata.ammo} />
+          )}
+          {ammoName && <MetaRow icon={<LuCircle size={11} />} label={Locale.ammo_type || 'Ammo type'} value={ammoName} />}
+          {item.metadata?.serial && (
+            <MetaRow icon={<LuHash size={11} />} label={Locale.ui_serial || 'Serial'} value={item.metadata.serial} />
+          )}
+          {item.metadata?.components && item.metadata?.components[0] && (
+            <MetaRow
+              icon={<LuPuzzle size={11} />}
+              label={Locale.ui_components || 'Components'}
+              value={(item.metadata?.components as string[])
+                .map((component, index, array) =>
+                  index + 1 === array.length ? Items[component]?.label : Items[component]?.label + ', '
+                )
+                .join('')}
+            />
+          )}
+          {item.metadata?.weapontint && (
+            <MetaRow icon={<LuPaintBucket size={11} />} label={Locale.ui_tint || 'Tint'} value={item.metadata.weapontint} />
+          )}
+          {additionalMetadata.map((data: { metadata: string; value: string }, index: number) => (
+            <Fragment key={`metadata-${index}`}>
+              {item.metadata && item.metadata[data.metadata] && (
+                <MetaRow label={data.value} value={item.metadata[data.metadata]} />
+              )}
+            </Fragment>
+          ))}
+        </div>
+      ) : (
+        <div className="tooltip-ingredients">
+          {ingredients &&
+            ingredients.map((ingredient) => {
+              const [iName, count] = [ingredient[0], ingredient[1]];
+              return (
+                <div className="tooltip-ingredient" key={`ingredient-${iName}`}>
+                  <img src={iName ? getItemUrl(iName) : 'none'} alt="item-image" />
+                  <p>
+                    {count >= 1
+                      ? `${count}× ${Items[iName]?.label || iName}`
+                      : count === 0
+                      ? `${Items[iName]?.label || iName}`
+                      : count < 1 && `${count * 100}% ${Items[iName]?.label || iName}`}
+                  </p>
+                </div>
+              );
+            })}
+        </div>
+      )}
+    </div>
   );
 };
 

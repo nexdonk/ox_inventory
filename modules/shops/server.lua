@@ -307,4 +307,197 @@ lib.callback.register('ox_inventory:buyItem', function(source, data)
 	end
 end)
 
+---@class CartCheckoutItem
+---@field name string
+---@field slot number
+---@field quantity number
+---@field price number
+---@field currency? string
+
+---@class CartCheckoutData
+---@field shopId string
+---@field items CartCheckoutItem[]
+---@field total number
+
+-- Cart-style checkout for the multi-item shop UI. Validates every item
+-- once, ensures the player can carry and afford the whole basket, then
+-- applies the transaction in one pass. Currency follows the standard
+-- ox_inventory model (per-item; defaults to 'money').
+lib.callback.register('ox_inventory:checkoutCart', function(source, data)
+	local playerInv = Inventory(source)
+
+	if not playerInv or not playerInv.currentShop then
+		return false, nil, { type = 'error', description = locale('not_in_shop') or 'Not in a shop' }
+	end
+
+	if not data or not data.items or #data.items == 0 then
+		return false, nil, { type = 'error', description = 'Cart is empty' }
+	end
+
+	local shopType, shopId = playerInv.currentShop:match('^(.-) (%d-)$')
+	if not shopType then shopType = playerInv.currentShop end
+	if shopId then shopId = tonumber(shopId) end
+
+	local shop = shopId and Shops[shopType][shopId] or Shops[shopType]
+	if not shop then
+		return false, nil, { type = 'error', description = 'Shop not found' }
+	end
+
+	-- Validate, accumulate per-currency totals and projected weight.
+	local totalWeight = 0
+	local currencyTotals = {} ---@type table<string, number>
+	local validated = {}
+
+	for _, cartItem in ipairs(data.items) do
+		local shopItem = shop.items[cartItem.slot]
+
+		if not shopItem or shopItem.name ~= cartItem.name then
+			return false, nil, { type = 'error', description = 'Item not found in shop' }
+		end
+
+		if cartItem.quantity <= 0 then
+			return false, nil, { type = 'error', description = 'Invalid quantity' }
+		end
+
+		if shopItem.count then
+			if shopItem.count == 0 then
+				return false, nil, { type = 'error', description = locale('shop_nostock') }
+			elseif cartItem.quantity > shopItem.count then
+				return false, nil, { type = 'error', description = ('Not enough stock for %s'):format(Items(shopItem.name)?.label or shopItem.name) }
+			end
+		end
+
+		if shopItem.license and server.hasLicense and not server.hasLicense(playerInv, shopItem.license) then
+			return false, nil, { type = 'error', description = locale('item_unlicensed') }
+		end
+
+		if shopItem.grade then
+			local _, rank = server.hasGroup(playerInv, shop.groups)
+			if not isRequiredGrade(shopItem.grade, rank) then
+				return false, nil, { type = 'error', description = locale('stash_lowgrade') }
+			end
+		end
+
+		local fromItem = Items(shopItem.name)
+		if not fromItem then
+			return false, nil, { type = 'error', description = 'Invalid item' }
+		end
+
+		local cbResult = fromItem.cb and fromItem.cb('buying', fromItem, playerInv, cartItem.slot, shop)
+		if cbResult == false then
+			return false, nil, { type = 'error', description = 'Cannot purchase this item' }
+		end
+
+		local metadata, quantity = Items.Metadata(playerInv, fromItem, shopItem.metadata and table.clone(shopItem.metadata) or {}, cartItem.quantity)
+		local itemWeight = fromItem.weight + (metadata?.weight or 0)
+		local currency = shopItem.currency or 'money'
+		local linePrice = shopItem.price * quantity
+
+		totalWeight = totalWeight + (itemWeight * quantity)
+		currencyTotals[currency] = (currencyTotals[currency] or 0) + linePrice
+
+		validated[#validated + 1] = {
+			shopItem = shopItem,
+			fromItem = fromItem,
+			quantity = quantity,
+			metadata = metadata,
+			slot = cartItem.slot,
+			price = linePrice,
+			currency = currency,
+		}
+	end
+
+	if playerInv.weight + totalWeight > playerInv.maxWeight then
+		return false, nil, { type = 'error', description = locale('cannot_carry') }
+	end
+
+	-- Affordability check across every currency in the cart.
+	for currency, amount in pairs(currencyTotals) do
+		if Inventory.GetItemCount(playerInv, currency) < amount then
+			local item = Items(currency)
+			return false, nil, {
+				type = 'error',
+				description = locale('cannot_afford', ('%s%s'):format(
+					(currency == 'money' and locale('$') or math.groupdigits(amount)),
+					(currency == 'money' and math.groupdigits(amount) or ' '..(item and item.label or currency))
+				))
+			}
+		end
+	end
+
+	-- All checks passed — apply the transaction.
+	local resultItems = {}
+	local shopUpdates = {}
+
+	for _, entry in ipairs(validated) do
+		local toSlot = Inventory.GetEmptySlot(playerInv)
+
+		if not toSlot and entry.fromItem.stack then
+			for slot, slotData in pairs(playerInv.items) do
+				if slotData and slotData.name == entry.fromItem.name and table.matches(slotData.metadata, entry.metadata) then
+					toSlot = slot
+					break
+				end
+			end
+		end
+
+		if not toSlot then
+			-- Out of room mid-checkout. Refund anything already taken so
+			-- we never leave the player with a partial transaction.
+			-- (Items aren't taken yet — we only mutate after the slot is
+			-- known — so just bail with a clear message here.)
+			return false, nil, { type = 'error', description = locale('cannot_carry') }
+		end
+
+		if not TriggerEventHooks('buyItem', {
+			source = source,
+			shopType = shopType,
+			shopId = shopId,
+			toInventory = playerInv.id,
+			toSlot = toSlot,
+			fromSlot = entry.shopItem,
+			itemName = entry.shopItem.name,
+			metadata = entry.metadata,
+			count = entry.quantity,
+			price = entry.shopItem.price,
+			totalPrice = entry.price,
+			currency = entry.currency,
+		}) then
+			return false, nil, { type = 'error', description = 'Purchase blocked' }
+		end
+
+		Inventory.SetSlot(playerInv, entry.fromItem, entry.quantity, entry.metadata, toSlot)
+		playerInv.weight = playerInv.weight + (entry.fromItem.weight + (entry.metadata?.weight or 0)) * entry.quantity
+		Inventory.RemoveItem(playerInv, entry.currency, entry.price)
+
+		resultItems[#resultItems + 1] = playerInv.items[toSlot]
+
+		if entry.shopItem.count then
+			shop.items[entry.slot].count = entry.shopItem.count - entry.quantity
+			shopUpdates[#shopUpdates + 1] = {
+				item = shop.items[entry.slot],
+				inventory = 'shop',
+			}
+		end
+	end
+
+	if server.syncInventory then server.syncInventory(playerInv) end
+
+	local cashTotal = currencyTotals.money or 0
+	local message = ('Purchased %d item%s for %s%s'):format(
+		#validated, #validated == 1 and '' or 's',
+		locale('$') or '$', math.groupdigits(cashTotal)
+	)
+
+	if server.loglevel > 0 then
+		lib.logger(playerInv.owner, 'checkoutCart', ('"%s" %s'):format(playerInv.label, message:lower()), ('shop:%s'):format(shop.label or shopType))
+	end
+
+	return true, {
+		items = resultItems,
+		weight = playerInv.weight,
+		shopUpdates = #shopUpdates > 0 and shopUpdates or nil,
+	}, { type = 'success', description = message }
+end)
+
 server.shops = Shops

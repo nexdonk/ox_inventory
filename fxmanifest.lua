@@ -15,7 +15,10 @@ dependencies {
     'ox_lib',
 }
 
-shared_script '@ox_lib/init.lua'
+shared_scripts {
+    '@ox_lib/init.lua',
+    'custom/shared/config.lua',
+}
 
 ox_libs {
     'locale',
@@ -25,10 +28,15 @@ ox_libs {
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
-    'init.lua'
+    'init.lua',
+    'custom/server/*.lua',
+    'custom/shared/sv_config.lua',
 }
 
-client_script 'init.lua'
+client_scripts {
+    'init.lua',
+    'custom/client/*.lua',
+}
 
 ui_page 'web/build/index.html'
 
@@ -39,6 +47,7 @@ files {
     'web/build/index.html',
     'web/build/assets/*.js',
     'web/build/assets/*.css',
+    'web/build/fonts/*.ttf',
     'web/images/*.png',
     'modules/**/shared.lua',
     'modules/**/client.lua',

@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { getItemUrl, isSlotWithItem } from '../../helpers';
 import useNuiEvent from '../../hooks/useNuiEvent';
-import { Items } from '../../store/items';
 import WeightBar from '../utils/WeightBar';
 import { useAppSelector } from '../../store';
 import { selectLeftInventory } from '../../store/inventory';
-import { SlotWithItem } from '../../typings';
-import SlideUp from '../utils/transitions/SlideUp';
+import { Slot, SlotWithItem } from '../../typings';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const InventoryHotbar: React.FC = () => {
   const [hotbarVisible, setHotbarVisible] = useState(false);
   const items = useAppSelector(selectLeftInventory).items.slice(0, 5);
 
-  //stupid fix for timeout
-  const [handle, setHandle] = useState<ReturnType<typeof setTimeout>>();
+  const [handle, setHandle] = useState<NodeJS.Timeout>();
   useNuiEvent('toggleHotbar', () => {
     if (hotbarVisible) {
       setHotbarVisible(false);
@@ -24,50 +22,73 @@ const InventoryHotbar: React.FC = () => {
     }
   });
 
+  const filled = Array.from({ length: 5 }, (_, i) => items[i] ?? ({ slot: i + 1 } as Slot));
+
   return (
-    <SlideUp in={hotbarVisible}>
-      <div className="hotbar-container">
-        {items.map((item) => (
+    <AnimatePresence>
+      {hotbarVisible && (
+        <motion.div
+          initial={{ opacity: 0, y: 26 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 18 }}
+          transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+          style={{
+            position: 'absolute',
+            bottom: '2vh',
+            left: 0,
+            right: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
           <div
-            className="hotbar-item-slot"
             style={{
-              backgroundImage: `url(${item?.name ? getItemUrl(item as SlotWithItem) : 'none'}`,
+              padding: '10px 12px 14px',
+              borderRadius: 14,
+              background: 'linear-gradient(180deg, rgba(14,14,18,0.85) 0%, rgba(6,6,8,0.9) 100%)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 18px 40px -16px rgba(0,0,0,0.7)',
+              display: 'flex',
+              gap: 8,
             }}
-            key={`hotbar-${item.slot}`}
           >
-            {isSlotWithItem(item) && (
-              <div className="item-slot-wrapper">
-                <div className="hotbar-slot-header-wrapper">
-                  <div className="inventory-slot-number">{item.slot}</div>
-                  <div className="item-slot-info-wrapper">
-                    <p>
-                      {item.weight > 0
-                        ? item.weight >= 1000
-                          ? `${(item.weight / 1000).toLocaleString('en-us', {
-                              minimumFractionDigits: 2,
-                            })}kg `
-                          : `${item.weight.toLocaleString('en-us', {
-                              minimumFractionDigits: 0,
-                            })}g `
-                        : ''}
-                    </p>
-                    <p>{item.count ? item.count.toLocaleString('en-us') + `x` : ''}</p>
+            {filled.map((item, idx) => (
+              <div
+                key={`hotbar-${idx}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                {isSlotWithItem(item) ? (
+                  <div
+                    className="hotbar-item-slot"
+                    style={{
+                      backgroundImage: `url(${item?.name ? getItemUrl(item as SlotWithItem) : 'none'}`,
+                    }}
+                  >
+                    {item.count !== undefined && item.count !== null && (
+                      <div className="slot-count-badge">{`${item.count.toLocaleString('en-us')}x`}</div>
+                    )}
+                    {item?.durability !== undefined && (
+                      <div className="slot-durability">
+                        <WeightBar percent={item.durability} durability />
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div>
-                  {item?.durability !== undefined && <WeightBar percent={item.durability} durability />}
-                  <div className="inventory-slot-label-box">
-                    <div className="inventory-slot-label-text">
-                      {item.metadata?.label ? item.metadata.label : Items[item.name]?.label || item.name}
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  <div className="hotbar-empty-slot" />
+                )}
+                <div className="hotbar-key-badge">{idx + 1}</div>
               </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
-    </SlideUp>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

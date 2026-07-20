@@ -1,10 +1,9 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DragSource, Inventory, InventoryType, Slot, SlotWithItem } from '../../typings';
 import { useDrag, useDragDropManager, useDrop } from 'react-dnd';
 import { useAppDispatch } from '../../store';
 import WeightBar from '../utils/WeightBar';
 import { onDrop } from '../../dnd/onDrop';
-import { onBuy } from '../../dnd/onBuy';
 import { Items } from '../../store/items';
 import { canCraftItem, canPurchaseItem, getItemUrl, isSlotWithItem } from '../../helpers';
 import { onUse } from '../../dnd/onUse';
@@ -30,6 +29,17 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   const manager = useDragDropManager();
   const dispatch = useAppDispatch();
   const timerRef = useRef<number | null>(null);
+  const prevCountRef = useRef(item.count);
+  const [flashCount, setFlashCount] = useState(false);
+
+  useEffect(() => {
+    if (prevCountRef.current !== undefined && prevCountRef.current !== item.count && item.count !== undefined) {
+      setFlashCount(true);
+      const t = window.setTimeout(() => setFlashCount(false), 580);
+      return () => window.clearTimeout(t);
+    }
+    prevCountRef.current = item.count;
+  }, [item.count]);
 
   const canDrag = useCallback(() => {
     return canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) && canCraftItem(item, inventoryType);
@@ -45,10 +55,7 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
         isSlotWithItem(item, inventoryType !== InventoryType.SHOP)
           ? {
               inventory: inventoryType,
-              item: {
-                name: item.name,
-                slot: item.slot,
-              },
+              item: { name: item.name, slot: item.slot },
               image: item?.name && `url(${getItemUrl(item) || 'none'}`,
             }
           : null,
@@ -60,14 +67,14 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   const [{ isOver }, drop] = useDrop<DragSource, void, { isOver: boolean }>(
     () => ({
       accept: 'SLOT',
-      collect: (monitor) => ({
-        isOver: monitor.isOver(),
-      }),
+      collect: (monitor) => ({ isOver: monitor.isOver() }),
       drop: (source) => {
         dispatch(closeTooltip());
         switch (source.inventory) {
           case InventoryType.SHOP:
-            onBuy(source, { inventory: inventoryType, item: { slot: item.slot } });
+            // Shop slots can only be dragged into the cart's drop zone — direct
+            // drag-to-buy is intentionally disabled so every purchase routes
+            // through the cart/checkout flow.
             break;
           case InventoryType.CRAFTING:
             onCraft(source, { inventory: inventoryType, item: { slot: item.slot } });
@@ -88,25 +95,18 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   useNuiEvent('refreshSlots', (data: { items?: ItemsPayload | ItemsPayload[] }) => {
     if (!isDragging && !data.items) return;
     if (!Array.isArray(data.items)) return;
-
     const itemSlot = data.items.find(
       (dataItem) => dataItem.item.slot === item.slot && dataItem.inventory === inventoryId
     );
-
     if (!itemSlot) return;
-
     manager.dispatch({ type: 'dnd-core/END_DRAG' });
   });
 
-  const connectRef = (element: HTMLDivElement | null) => {
-    if (!element) return;
-    drag(drop(element));
-  };
+  const connectRef = (element: HTMLDivElement) => drag(drop(element));
 
   const handleContext = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     if (inventoryType !== 'player' || !isSlotWithItem(item)) return;
-
     dispatch(openContextMenu({ item, coords: { x: event.clientX, y: event.clientY } }));
   };
 
@@ -121,21 +121,18 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
   };
 
   const refs = useMergeRefs([connectRef, ref]);
+  const locked =
+    !canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) || !canCraftItem(item, inventoryType);
 
   return (
     <div
       ref={refs}
       onContextMenu={handleContext}
       onClick={handleClick}
-      className="inventory-slot"
+      className={`inventory-slot${locked ? ' inventory-slot--locked' : ''}${isOver ? ' inventory-slot--over' : ''}`}
       style={{
-        filter:
-          !canPurchaseItem(item, { type: inventoryType, groups: inventoryGroups }) || !canCraftItem(item, inventoryType)
-            ? 'brightness(80%) grayscale(100%)'
-            : undefined,
-        opacity: isDragging ? 0.4 : 1.0,
+        opacity: isDragging ? 0.35 : undefined,
         backgroundImage: `url(${item?.name ? getItemUrl(item as SlotWithItem) : 'none'}`,
-        border: isOver ? '1px dashed rgba(255,255,255,0.4)' : '',
       }}
     >
       {isSlotWithItem(item) && (
@@ -144,7 +141,7 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
           onMouseEnter={() => {
             timerRef.current = window.setTimeout(() => {
               dispatch(openTooltip({ item, inventoryType }));
-            }, 500) as unknown as number;
+            }, 380) as unknown as number;
           }}
           onMouseLeave={() => {
             dispatch(closeTooltip());
@@ -154,71 +151,49 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
             }
           }}
         >
-          <div
-            className={
-              inventoryType === 'player' && item.slot <= 5 ? 'item-hotslot-header-wrapper' : 'item-slot-header-wrapper'
-            }
-          >
-            {inventoryType === 'player' && item.slot <= 5 && <div className="inventory-slot-number">{item.slot}</div>}
-            <div className="item-slot-info-wrapper">
-              <p>
-                {item.weight > 0
-                  ? item.weight >= 1000
-                    ? `${(item.weight / 1000).toLocaleString('en-us', {
-                        minimumFractionDigits: 2,
-                      })}kg `
-                    : `${item.weight.toLocaleString('en-us', {
-                        minimumFractionDigits: 0,
-                      })}g `
-                  : ''}
-              </p>
-              <p>{item.count ? item.count.toLocaleString('en-us') + `x` : ''}</p>
+          {item.weight !== undefined && item.weight > 0 && (
+            <div className="slot-weight-badge">
+              {item.weight >= 1000
+                ? `${(item.weight / 1000).toFixed(2)}kg`
+                : `${item.weight.toLocaleString('en-us')}g`}
             </div>
-          </div>
-          <div>
-            {inventoryType !== 'shop' && item?.durability !== undefined && (
+          )}
+
+          {item.count !== undefined && item.count !== null && (
+            <div className={`slot-count-badge${flashCount ? ' slot-count-badge--flash' : ''}`}>
+              {`${item.count.toLocaleString('en-us')}x`}
+            </div>
+          )}
+
+          {inventoryType === 'shop' && item?.price !== undefined && item.price > 0 ? (
+            <div className="slot-price-badge">
+              {item?.currency && item.currency !== 'money' && item.currency !== 'black_money' ? (
+                <>
+                  <img
+                    src={getItemUrl(item.currency)}
+                    alt=""
+                    style={{ width: '1.4vh', height: 'auto', imageRendering: '-webkit-optimize-contrast' }}
+                  />
+                  <span>{item.price.toLocaleString('en-us')}</span>
+                </>
+              ) : (
+                <span style={{ color: item.currency === 'black_money' ? '#cfcfd6' : '#fafafa' }}>
+                  {Locale.$ || '$'}
+                  {item.price.toLocaleString('en-us')}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="slot-label">
+              {item.metadata?.label ? item.metadata.label : Items[item.name]?.label || item.name}
+            </div>
+          )}
+
+          {inventoryType !== 'shop' && item?.durability !== undefined && (
+            <div className="slot-durability">
               <WeightBar percent={item.durability} durability />
-            )}
-            {inventoryType === 'shop' && item?.price !== undefined && (
-              <>
-                {item?.currency !== 'money' && item.currency !== 'black_money' && item.price > 0 && item.currency ? (
-                  <div className="item-slot-currency-wrapper">
-                    <img
-                      src={item.currency ? getItemUrl(item.currency) : 'none'}
-                      alt="item-image"
-                      style={{
-                        imageRendering: '-webkit-optimize-contrast',
-                        height: 'auto',
-                        width: '2vh',
-                        backfaceVisibility: 'hidden',
-                        transform: 'translateZ(0)',
-                      }}
-                    />
-                    <p>{item.price.toLocaleString('en-us')}</p>
-                  </div>
-                ) : (
-                  <>
-                    {item.price > 0 && (
-                      <div
-                        className="item-slot-price-wrapper"
-                        style={{ color: item.currency === 'money' || !item.currency ? '#2ECC71' : '#E74C3C' }}
-                      >
-                        <p>
-                          {Locale.$ || '$'}
-                          {item.price.toLocaleString('en-us')}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-            <div className="inventory-slot-label-box">
-              <div className="inventory-slot-label-text">
-                {item.metadata?.label ? item.metadata.label : Items[item.name]?.label || item.name}
-              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

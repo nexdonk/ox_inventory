@@ -5,17 +5,15 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: './',
-  publicDir: false,
+  publicDir: 'public',
   build: {
     outDir: 'build',
     target: 'esnext',
-    emptyOutDir: true,
-    rolldownOptions: {
-      output: {
-        assetFileNames: 'assets/[name][extname]',
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-      },
-    },
+  },
+  define: {
+    'process.env': {},
+  },
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
   },
 });

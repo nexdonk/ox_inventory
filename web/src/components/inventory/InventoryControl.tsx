@@ -1,26 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { useDrop } from 'react-dnd';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { selectItemAmount, setItemAmount } from '../../store/inventory';
 import { DragSource } from '../../typings';
 import { onUse } from '../../dnd/onUse';
 import { onGive } from '../../dnd/onGive';
-import { fetchNui } from '../../utils/fetchNui';
 import { Locale } from '../../store/locale';
-import UsefulControls from './UsefulControls';
+import { motion } from 'framer-motion';
+import { LuMousePointerClick, LuHeartHandshake } from 'react-icons/lu';
 
-const formatAmount = (n: number) => (n > 0 ? n.toLocaleString('en-US') : '0');
-const digitsOnly = (s: string) => s.replace(/\D/g, '');
-const countDigitsBefore = (s: string, index: number) => digitsOnly(s.substring(0, index)).length;
+interface IconButtonProps {
+  icon: React.ReactNode;
+  label: string;
+}
+
+const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({ icon, label }, ref) => (
+  <motion.button
+    ref={ref as any}
+    whileHover={{ y: -2 }}
+    whileTap={{ scale: 0.95 }}
+    className="control-icon-btn"
+    type="button"
+  >
+    <span className="control-icon-wrap">
+      <span className="control-icon-glow" aria-hidden />
+      <span className="control-icon">{icon}</span>
+    </span>
+    <span className="control-label">{label}</span>
+  </motion.button>
+));
 
 const InventoryControl: React.FC = () => {
   const itemAmount = useAppSelector(selectItemAmount);
   const dispatch = useAppDispatch();
-
-  const [infoVisible, setInfoVisible] = useState(false);
-  const [value, setValue] = useState(formatAmount(itemAmount));
-  const inputRef = useRef<HTMLInputElement>(null);
-  const cursorRef = useRef<number | null>(null);
 
   const [, use] = useDrop<DragSource, void, any>(() => ({
     accept: 'SLOT',
@@ -36,89 +48,70 @@ const InventoryControl: React.FC = () => {
     },
   }));
 
-  const commitValue = (raw: string, cursorIndex: number) => {
-    const digitsBefore = countDigitsBefore(raw, cursorIndex);
-    const num = parseInt(digitsOnly(raw), 10) || 0;
-
-    setValue(formatAmount(num));
-    dispatch(setItemAmount(num));
-    cursorRef.current = digitsBefore;
+  const inputHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.target.valueAsNumber =
+      isNaN(event.target.valueAsNumber) || event.target.valueAsNumber < 0 ? 0 : Math.floor(event.target.valueAsNumber);
+    dispatch(setItemAmount(event.target.valueAsNumber));
   };
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) =>
-    commitValue(event.target.value, event.target.selectionStart ?? 0);
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    const el = event.currentTarget;
-    const pos = el.selectionStart ?? 0;
-
-    if (pos !== el.selectionEnd) return;
-
-    if (event.key === 'Backspace' && el.value[pos - 1] === ',') {
-      event.preventDefault();
-      commitValue(el.value.slice(0, pos - 2) + el.value.slice(pos), pos - 2);
-    } else if (event.key === 'Delete' && el.value[pos] === ',') {
-      event.preventDefault();
-      commitValue(el.value.slice(0, pos) + el.value.slice(pos + 2), pos);
-    }
+  const adjustAmount = (delta: number, currentEl?: HTMLInputElement | null) => {
+    const input = currentEl;
+    if (!input) return;
+    const next = Math.max(0, (parseInt(input.value || '0', 10) || 0) + delta);
+    input.value = String(next);
+    dispatch(setItemAmount(next));
   };
 
-  useEffect(() => {
-    if (!inputRef.current || cursorRef.current === null) return;
-    let newPos = 0;
-    let count = 0;
-
-    for (let i = 0; i < value.length && count < cursorRef.current; i++) {
-      if (/\d/.test(value[i])) count++;
-      newPos++;
-    }
-
-    inputRef.current.setSelectionRange(newPos, newPos);
-    cursorRef.current = null;
-  }, [value]);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   return (
-    <>
-      <UsefulControls infoVisible={infoVisible} setInfoVisible={setInfoVisible} />
-      <div className="inventory-control">
-        <div className="inventory-control-wrapper">
+    <motion.div
+      className="control-column"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+    >
+      <IconButton
+        icon={<LuMousePointerClick size={26} strokeWidth={1.7} />}
+        label={Locale.ui_use || 'Use'}
+        ref={use as any}
+      />
+
+      <div className="control-amount-wrap">
+        <div className="control-amount-pill">
+          <button
+            type="button"
+            className="control-amount-step"
+            onClick={() => adjustAmount(-1, inputRef.current)}
+            aria-label="Decrease amount"
+          >
+            −
+          </button>
           <input
-            className="inventory-control-input"
-            type="text"
             ref={inputRef}
-            value={value}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
+            type="number"
+            defaultValue={itemAmount}
+            onChange={inputHandler}
             min={0}
+            aria-label="Amount"
           />
           <button
-            className="inventory-control-button"
-            ref={(el) => {
-              use(el);
-            }}
+            type="button"
+            className="control-amount-step"
+            onClick={() => adjustAmount(1, inputRef.current)}
+            aria-label="Increase amount"
           >
-            {Locale.ui_use || 'Use'}
-          </button>
-          <button
-            className="inventory-control-button"
-            ref={(el) => {
-              give(el);
-            }}
-          >
-            {Locale.ui_give || 'Give'}
-          </button>
-          <button className="inventory-control-button" onClick={() => fetchNui('exit')}>
-            {Locale.ui_close || 'Close'}
+            +
           </button>
         </div>
       </div>
 
-      <button className="useful-controls-button" onClick={() => setInfoVisible(true)}>
-        <svg xmlns="http://www.w3.org/2000/svg" height="2em" viewBox="0 0 524 524">
-          <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM216 336h24V272H216c-13.3 0-24-10.7-24-24s10.7-24 24-24h48c13.3 0 24 10.7 24 24v88h8c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm40-208a32 32 0 1 1 0 64 32 32 0 1 1 0-64z" />
-        </svg>
-      </button>
-    </>
+      <IconButton
+        icon={<LuHeartHandshake size={26} strokeWidth={1.7} />}
+        label={Locale.ui_give || 'Give'}
+        ref={give as any}
+      />
+    </motion.div>
   );
 };
 

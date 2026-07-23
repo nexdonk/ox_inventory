@@ -7,30 +7,36 @@ import { onUse } from '../../dnd/onUse';
 import { onGive } from '../../dnd/onGive';
 import { Locale } from '../../store/locale';
 import { motion } from 'framer-motion';
-import { LuMousePointerClick, LuHeartHandshake } from 'react-icons/lu';
+import { LuMousePointerClick, LuHelpingHand, LuInfo, LuX } from 'react-icons/lu';
 
 interface IconButtonProps {
   icon: React.ReactNode;
   label: string;
+  small?: boolean;
+  onClick?: () => void;
 }
 
-const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({ icon, label }, ref) => (
+const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(({ icon, label, small, onClick }, ref) => (
   <motion.button
     ref={ref as any}
-    whileHover={{ y: -2 }}
     whileTap={{ scale: 0.95 }}
-    className="control-icon-btn"
+    className={'control-icon-btn' + (small ? ' control-icon-btn--small' : '')}
     type="button"
+    onClick={onClick}
   >
     <span className="control-icon-wrap">
-      <span className="control-icon-glow" aria-hidden />
       <span className="control-icon">{icon}</span>
     </span>
     <span className="control-label">{label}</span>
   </motion.button>
 ));
 
-const InventoryControl: React.FC = () => {
+interface Props {
+  onInfo: () => void;
+  onClose: () => void;
+}
+
+const InventoryControl: React.FC<Props> = ({ onInfo, onClose }) => {
   const itemAmount = useAppSelector(selectItemAmount);
   const dispatch = useAppDispatch();
 
@@ -67,9 +73,9 @@ const InventoryControl: React.FC = () => {
   return (
     <motion.div
       className="control-column"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.12, ease: 'easeOut' }}
     >
       <IconButton
         icon={<LuMousePointerClick size={26} strokeWidth={1.7} />}
@@ -107,10 +113,16 @@ const InventoryControl: React.FC = () => {
       </div>
 
       <IconButton
-        icon={<LuHeartHandshake size={26} strokeWidth={1.7} />}
+        icon={<LuHelpingHand size={26} strokeWidth={1.7} />}
         label={Locale.ui_give || 'Give'}
         ref={give as any}
       />
+
+      {/* Secondary actions — same visual family as USE/GIVE, smaller tier */}
+      <div className="control-secondary">
+        <IconButton small icon={<LuInfo size={18} strokeWidth={1.9} />} label="Info" onClick={onInfo} />
+        <IconButton small icon={<LuX size={18} strokeWidth={1.9} />} label="Close" onClick={onClose} />
+      </div>
     </motion.div>
   );
 };

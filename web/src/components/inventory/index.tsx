@@ -4,7 +4,6 @@ import useNuiEvent from '../../hooks/useNuiEvent';
 import InventoryControl from './InventoryControl';
 import InventoryHotbar from './InventoryHotbar';
 import InventoryTopbar from './InventoryTopbar';
-import InventoryBottomBar from './InventoryBottomBar';
 import UsefulControls from './UsefulControls';
 import ClothingPanel from './ClothingPanel';
 import { useAppDispatch } from '../../store';
@@ -70,26 +69,29 @@ const Inventory: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
           >
             <InventoryTopbar />
             <div className="inventory-content">
-              <LeftInventory
-                filter={filter}
-                onFilterChange={setFilter}
-                clothingMode={clothingMode}
-                onClothingToggle={() => setClothingMode((v) => !v)}
-              />
-              <AnimatePresence>
-                {clothingMode ? (
-                  <ClothingPanel key="clothing" onClose={() => setClothingMode(false)} />
-                ) : (
-                  <InventoryControl key="control" />
-                )}
-              </AnimatePresence>
-              <RightInventory />
+              {/* The row hugs the tallest panel (left) and top-aligns the two
+                  inventory panels; the row itself stays vertically centered. */}
+              <div className="inventory-row">
+                <LeftInventory
+                  filter={filter}
+                  onFilterChange={setFilter}
+                  clothingMode={clothingMode}
+                  onClothingToggle={() => setClothingMode((v) => !v)}
+                />
+                <AnimatePresence>
+                  {clothingMode ? (
+                    <ClothingPanel key="clothing" onClose={() => setClothingMode(false)} />
+                  ) : (
+                    <InventoryControl key="control" onInfo={() => setInfoVisible(true)} onClose={handleClose} />
+                  )}
+                </AnimatePresence>
+                <RightInventory />
+              </div>
             </div>
-            <InventoryBottomBar onInfo={() => setInfoVisible(true)} onClose={handleClose} />
             <UsefulControls infoVisible={infoVisible} setInfoVisible={setInfoVisible} />
             <Tooltip />
             <InventoryContext />

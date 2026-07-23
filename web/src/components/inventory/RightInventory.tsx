@@ -60,10 +60,10 @@ const RightInventory: React.FC = () => {
   return (
     <motion.div
       className={'inventory-side inventory-side--right' + (isShop ? ' inventory-side--shop' : '')}
-      initial={{ opacity: 0, x: 16 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 16 }}
-      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12, ease: 'easeOut' }}
     >
       <SectionHeader
         icon={<Icon size={14} />}
@@ -73,10 +73,8 @@ const RightInventory: React.FC = () => {
         weight={rightInventory.maxWeight ? { current: weight, max: rightInventory.maxWeight } : undefined}
       />
 
-      {/* In shop mode, lock the grid to its default 5 rows so it mirrors the
-          left grid exactly; the cart below will be sized to the hotbar's
-          height so the two sides align bottom-to-bottom. */}
-      <InventoryGrid inventory={rightInventory} hideHeader matchLeftHeight={!isShop} />
+      {/* Fixed 5 rows — always mirrors the left grid exactly. */}
+      <InventoryGrid inventory={rightInventory} hideHeader />
 
       {isShop && <ShoppingCart />}
     </motion.div>

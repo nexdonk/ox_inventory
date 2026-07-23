@@ -1,5 +1,5 @@
 import React from 'react';
-import { LuLock } from 'react-icons/lu';
+import { LuScale } from 'react-icons/lu';
 
 interface Props {
   icon?: React.ReactNode;
@@ -25,13 +25,15 @@ const SectionHeader: React.FC<Props> = ({ icon, tone, title, subtitle, weight })
       {weight && (
         <div className="section-header-right">
           <div className="section-header-weight">
-            <span className="dim">Weight</span>
-            <span className="weight-num">{(weight.current / 1000).toFixed(3)}</span>
-            <span className="dim">/</span>
-            <span className="weight-num">{(weight.max / 1000).toFixed(0)}kg</span>
+            <span className="weight-label">Weight</span>
+            <span className="weight-row">
+              <span className="weight-num">{(weight.current / 1000).toFixed(3)}</span>
+              <span className="dim">/</span>
+              <span className="weight-num">{(weight.max / 1000).toFixed(0)}kg</span>
+            </span>
           </div>
-          <div className="section-header-lock" title="Capacity">
-            <LuLock size={11} strokeWidth={2.2} />
+          <div className="section-header-badge" title="Weight">
+            <LuScale size={12} strokeWidth={2.2} />
           </div>
         </div>
       )}

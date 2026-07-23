@@ -22,7 +22,6 @@ const InventoryActions: React.FC<Props> = ({ filter, onFilterChange, clothingMod
     <div className="inv-actions">
       <motion.button
         type="button"
-        whileHover={{ y: -1 }}
         whileTap={{ scale: 0.94 }}
         className={`inv-action-btn inv-action-btn--clothing${clothingMode ? ' is-active' : ''}`}
         onClick={onClothingToggle}
@@ -38,7 +37,6 @@ const InventoryActions: React.FC<Props> = ({ filter, onFilterChange, clothingMod
         <motion.button
           key={f.id}
           type="button"
-          whileHover={{ y: -1 }}
           whileTap={{ scale: 0.94 }}
           className={`inv-action-btn inv-action-btn--${f.id}${filter === f.id ? ' is-active' : ''}`}
           onClick={() => onFilterChange(f.id)}

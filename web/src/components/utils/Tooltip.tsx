@@ -13,7 +13,7 @@ const Tooltip: React.FC = () => {
   });
 
   const { isMounted, styles } = useTransitionStyles(context, {
-    duration: 200,
+    duration: 100,
   });
 
   const handleMouseMove = ({ clientX, clientY }: MouseEvent | React.MouseEvent<unknown, MouseEvent>) => {

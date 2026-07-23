@@ -24,10 +24,10 @@ const LeftInventory: React.FC<Props> = ({ filter, onFilterChange, clothingMode, 
   return (
     <motion.div
       className="inventory-side inventory-side--left"
-      initial={{ opacity: 0, x: -16 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -16 }}
-      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12, ease: 'easeOut' }}
     >
       <SectionHeader
         icon={<LuBoxes size={14} />}

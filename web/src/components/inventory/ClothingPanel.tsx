@@ -71,7 +71,6 @@ const ClothingPanel: React.FC<Props> = (_props) => {
       <motion.button
         key={item.action}
         type="button"
-        whileHover={{ y: -1 }}
         whileTap={{ scale: 0.95 }}
         className={`clothing-btn${isActive ? ' clothing-btn--active' : ''}`}
         onClick={() => triggerToggle(item.action)}
@@ -89,7 +88,7 @@ const ClothingPanel: React.FC<Props> = (_props) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.4, ease: 'easeInOut' }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
     >
       <div className="clothing-col">
         {LEFT_BUTTONS.map(renderButton)}

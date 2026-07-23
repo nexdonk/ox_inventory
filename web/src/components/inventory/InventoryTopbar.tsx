@@ -14,16 +14,15 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
+      staggerChildren: 0.03,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: -10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
-};
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.15, ease: 'easeOut' } },
+} as const;
 
 const InventoryTopbar: React.FC = () => {
   const left = useAppSelector(selectLeftInventory);

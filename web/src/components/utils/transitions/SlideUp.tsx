@@ -10,7 +10,7 @@ const SlideUp: React.FC<Props> = (props) => {
   const nodeRef = useRef(null);
 
   return (
-    <CSSTransition nodeRef={nodeRef} in={props.in} timeout={200} classNames="transition-slide-up" unmountOnExit>
+    <CSSTransition nodeRef={nodeRef} in={props.in} timeout={120} classNames="transition-slide-up" unmountOnExit>
       {React.cloneElement(props.children, { ref: nodeRef })}
     </CSSTransition>
   );

@@ -26,7 +26,7 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['Exo', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['Roboto Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {

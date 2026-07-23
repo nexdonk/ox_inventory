@@ -31,7 +31,7 @@ const UsefulControls: React.FC<Props> = ({ infoVisible, setInfoVisible }) => {
     outsidePressEvent: 'mousedown',
   });
 
-  const { isMounted, styles } = useTransitionStyles(context);
+  const { isMounted, styles } = useTransitionStyles(context, { duration: 100 });
   const { getFloatingProps } = useInteractions([dismiss]);
 
   const rows: Row[] = [
@@ -50,7 +50,7 @@ const UsefulControls: React.FC<Props> = ({ infoVisible, setInfoVisible }) => {
         <FloatingFocusManager context={context}>
           <div ref={refs.setFloating} {...getFloatingProps()} className="useful-controls-dialog" style={styles}>
             <div className="useful-controls-dialog-title">
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.8rem' }}>
                 <LuKeyboard size={14} />
                 <span>{Locale.ui_usefulcontrols || 'Useful controls'}</span>
               </span>
@@ -67,15 +67,15 @@ const UsefulControls: React.FC<Props> = ({ infoVisible, setInfoVisible }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: 14,
+                    gap: '1.4rem',
                   }}
                 >
-                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                     {row.keys.map((k, i) => (
                       <React.Fragment key={`${k}-${i}`}>
                         <kbd>{k}</kbd>
                         {i < row.keys.length - 1 && (
-                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>+</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.2rem' }}>+</span>
                         )}
                       </React.Fragment>
                     ))}
@@ -83,7 +83,7 @@ const UsefulControls: React.FC<Props> = ({ infoVisible, setInfoVisible }) => {
                   <span style={{ flex: 1, textAlign: 'right' }}>{row.text}</span>
                 </div>
               ))}
-              <div style={{ textAlign: 'right', fontSize: 11, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em' }}>
+              <div style={{ textAlign: 'right', fontSize: '1.1rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em' }}>
                 🐂 OX
               </div>
             </div>

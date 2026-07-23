@@ -194,7 +194,7 @@ export const MenuComponent = React.forwardRef<HTMLButtonElement, MenuProps & Rea
           >
             {label}
             {isNested && (
-              <span aria-hidden style={{ marginLeft: 10, fontSize: 10 }}>
+              <span aria-hidden style={{ marginLeft: '1rem', fontSize: '1rem' }}>
                 ▶
               </span>
             )}

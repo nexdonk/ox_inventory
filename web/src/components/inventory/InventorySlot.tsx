@@ -172,7 +172,7 @@ const InventorySlot: React.ForwardRefRenderFunction<HTMLDivElement, SlotProps> =
                   <img
                     src={getItemUrl(item.currency)}
                     alt=""
-                    style={{ width: '1.4vh', height: 'auto', imageRendering: '-webkit-optimize-contrast' }}
+                    style={{ width: '1.5rem', height: 'auto', imageRendering: '-webkit-optimize-contrast' }}
                   />
                   <span>{item.price.toLocaleString('en-us')}</span>
                 </>

@@ -9,12 +9,12 @@ import Divider from '../utils/Divider';
 import { LuClock, LuShield, LuHash, LuTarget, LuPaintBucket, LuPuzzle, LuCircle } from 'react-icons/lu';
 
 const MetaRow: React.FC<{ icon?: React.ReactNode; label: string; value: React.ReactNode }> = ({ icon, label, value }) => (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    {icon && <span style={{ display: 'inline-flex', color: 'rgba(255,255,255,0.45)' }}>{icon}</span>}
-    <span className="key" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'Roboto Mono, monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+    {icon && <span style={{ display: 'inline-flex', color: 'rgba(255,255,255,0.85)' }}>{icon}</span>}
+    <span className="key" style={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'Roboto Mono, monospace', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
       {label}
     </span>
-    <span style={{ marginLeft: 'auto', fontFamily: 'Roboto Mono, monospace', fontSize: 11.5, color: '#f4f4f6' }}>
+    <span style={{ marginLeft: 'auto', fontFamily: 'Roboto Mono, monospace', fontSize: '1.25rem', color: '#ffffff' }}>
       {value}
     </span>
   </div>
@@ -51,7 +51,7 @@ const SlotTooltip: React.ForwardRefRenderFunction<
         {inventoryType === 'crafting' ? (
           <div className="tooltip-crafting-duration">
             <LuClock size={11} />
-            <span style={{ fontFamily: 'Roboto Mono, monospace', fontSize: 11 }}>
+            <span style={{ fontFamily: 'Roboto Mono, monospace', fontSize: '1.2rem' }}>
               {(item.duration !== undefined ? item.duration : 3000) / 1000}s
             </span>
           </div>

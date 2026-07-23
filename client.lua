@@ -1906,6 +1906,39 @@ RegisterNUICallback('buyItem', function(data, cb)
 	cb(response)
 end)
 
+RegisterNUICallback('checkoutCart', function(data, cb)
+	---@type boolean, nil | { items: SlotWithItem[], weight: number, shopUpdates?: { item: SlotWithItem, inventory: string }[] }, NotifyProps
+	local response, result, message = lib.callback.await('ox_inventory:checkoutCart', 200, data)
+
+	if result then
+		local updates = {}
+
+		for i = 1, #result.items do
+			updates[i] = {
+				item = result.items[i],
+				inventory = cache.serverId
+			}
+		end
+
+		updateInventory(updates, result.weight)
+
+		if result.shopUpdates then
+			SendNUIMessage({
+				action = 'refreshSlots',
+				data = {
+					items = result.shopUpdates
+				}
+			})
+		end
+	end
+
+	if message then
+		lib.notify(message)
+	end
+
+	cb(response)
+end)
+
 RegisterNUICallback('craftItem', function(data, cb)
 	cb(true)
 

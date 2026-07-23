@@ -61,6 +61,7 @@ RegisterNUICallback('getNexConfig', function(_, cb)
         useCitizenId       = cfg.UseCitizenId == true,
         useNativeLabeling  = cfg.UseNativeLabeling ~= false,
         mouseTrail         = cfg.mouseTrailActive or { enabled = false },
+        uiScale            = tonumber(cfg.UiScale) or 1.0,
         theme              = cfg.ThemeSettings or {},
         profile = {
             name       = profile and profile.name or nil,

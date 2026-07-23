@@ -48,6 +48,8 @@ export interface NexConfig {
   useCitizenId: boolean;
   useNativeLabeling: boolean;
   mouseTrail: { enabled: boolean; color?: { r: number; g: number; b: number } };
+  /** Global size multiplier for the whole UI (fonts, icons, grids). 1.0 = default. */
+  uiScale?: number;
   theme: NexThemeSettings;
   profile: NexProfile;
 }
@@ -57,6 +59,7 @@ const DEFAULT_CONFIG: NexConfig = {
   useCitizenId: false,
   useNativeLabeling: true,
   mouseTrail: { enabled: false },
+  uiScale: 1.0,
   theme: { PrimaryColor: '#3B82F6' },
   profile: {},
 };
@@ -148,6 +151,13 @@ const applyCssVars = (cfg: NexConfig) => {
   const root = document.documentElement;
   const t = cfg.theme || {};
   const p = derivePalette(t.PrimaryColor);
+
+  // Global UI scale — multiplies the root font-size (all rem sizing) and
+  // --grid-size together. Clamped so a config typo can't push the layout
+  // off-screen: past ~1.1 the player column (5-row grid + hotbar) no
+  // longer fits a 16:9 screen vertically.
+  const rawScale = typeof cfg.uiScale === 'number' && isFinite(cfg.uiScale) ? cfg.uiScale : 1.0;
+  root.style.setProperty('--ui-scale', String(Math.min(1.1, Math.max(0.7, rawScale))));
 
   // Primary — always derived (UI-safe clamped) so dark/blown-out picks still read.
   root.style.setProperty('--nex-primary', p.primaryHex);

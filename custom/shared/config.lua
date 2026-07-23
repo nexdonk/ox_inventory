@@ -31,6 +31,17 @@ NEX.mouseTrailActive = {
     -- color = { r = 255, g = 255, b = 255 },
 }
 
+-- Global UI scale.  Multiplies the size of EVERYTHING — grids, slots,
+-- titles, icons, tooltips — on top of the automatic resolution scaling
+-- (the UI is already sized relative to the player's screen height, so
+-- this is a taste knob, not a per-resolution fix).
+--   1.0  → default size
+--   1.1  → 10% bigger, 0.9 → 10% smaller, etc.
+-- Clamped to 0.7 – 1.1 in the UI; above ~1.1 the player column (5-row
+-- grid + hotbar) stops fitting a 16:9 screen vertically.  No rebuild
+-- needed — edit and restart the resource.
+NEX.UiScale = 1.0
+
 -- ─────────────────────────────────────────────────────────────────────
 -- THEME — black & white
 --
